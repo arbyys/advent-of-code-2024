@@ -1,0 +1,23 @@
+{
+  "name": "advent-of-code-2024",
+  "version": "1.0.0",
+  "description": "Advent of Code 2024 with TypeScript and Effect",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "ts-node src/cli.ts",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write ."
+  },
+  "author": "Adam Petříček",
+  "license": "MIT",
+  "dependencies": {
+    "effect": "^3.10.19"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.2",
+    "eslint": "^8.49.0",
+    "prettier": "^3.1.2",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.3"
+  }
+}
