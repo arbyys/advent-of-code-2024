@@ -1,4 +1,4 @@
-import { Effect, pipe, Schema, Either, Array, Order } from "effect";
+import { Effect, pipe, Schema, Either } from "effect";
 
 const LineSchema = Schema.Array(Schema.NumberFromString);
 
