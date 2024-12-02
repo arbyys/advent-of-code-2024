@@ -2,6 +2,7 @@
 
 ## Running the code
 - `npm install`
+- `npx tsx`
 ```sh
 tsx ./src/runner.ts <dayNumber> <"part1" or "part2"> <boolean useSampleData>
 

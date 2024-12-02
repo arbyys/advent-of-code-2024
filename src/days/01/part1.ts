@@ -38,9 +38,8 @@ const reduceDistances = (array: number[][]): number => {
 }
 
 export const part1 = (data: string): Effect.Effect<number, never, never> => {
-    const parsedData = parse(data);
     const process = pipe(
-        parsedData,
+        parse(data),
         sortArrays,
         reduceDistances,
         Effect.succeed,

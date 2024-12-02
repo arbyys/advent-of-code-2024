@@ -21,10 +21,8 @@ const parse = (data: string) => {
 }
 
 export const part2 = (data: string): Effect.Effect<unknown, never, never> => {
-    const parsedData = parse(data);
-    const process = pipe(
-        parsedData,
+    return pipe(
+        parse(data),
         Effect.succeed,
-    );
-    return process;
+    )
 }

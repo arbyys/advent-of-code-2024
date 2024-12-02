@@ -37,11 +37,9 @@ const reduceSimilarities = (array: number[][]): number => {
 }
 
 export const part2 = (data: string): Effect.Effect<number, never, never> => {
-    const parsedData = parse(data);
-    const process = pipe(
-        parsedData,
+    return pipe(
+        parse(data),
         reduceSimilarities,
         Effect.succeed,
     );
-    return process;
 }
