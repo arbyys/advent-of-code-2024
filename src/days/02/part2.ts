@@ -1,5 +1,13 @@
 import { Effect, pipe, Either, Schema } from "effect";
 
+// The algorithm for part2:
+
+// Since just one correction of bad level is allowed,
+// it's only needed to find first occurence of bad level,
+// attempt to fix it and try again. Another occurence of bad level
+// is unfixable.
+
+// "Attempt to fix it" = Remove level that caused the error or the previous one (or penultimate one in case of Direction Change Error)
 const LineSchema = Schema.Array(Schema.NumberFromString);
 
 const parse = (data: string) => {
@@ -21,29 +29,57 @@ const parse = (data: string) => {
     return rows;
 }
 
-const reportIsSafe = (row: number[]): boolean => {
-    const directionChanges = row.map((number, index) => {
-        const prev = index > 0 ? row[index - 1] : null;
-        if (!prev) return prev;
-
-        return (number - prev) > 0;
-    });
-
-    const unsafeLevels = row.reduce((unsafeLevels, curr, index) => {
-        const prev = index > 0 ? row[index - 1] : null;
-        if (!prev) {
-            return unsafeLevels;
-        }
-        const distance = Math.abs(curr-prev);
-        return unsafeLevels + ((distance >= 1 && distance <= 3) ? 0 : 1);
-    }, 0);
-    
-    return directionChanges.every( i => i === null || i === directionChanges[1]) && unsafeLevels == 0;
+const calcDirection = (num: number, prev: number): number => {
+    const difference = (num - prev);
+    return (difference == 0 ? 0 : (difference > 0 ? 1 : -1));
 }
 
-const reduceReports = (rows: number[][]): number => {
+const findFirstBadDistance = (row: number[]): number => {
+    return row.findIndex((element, index, array) => {
+        if (index < 1) return false;
+        const distance = Math.abs(element - array[index-1]);
+        return (distance < 1) || (distance > 3);
+    });
+}
+
+const findFirstDirectionChange = (row: number[]): number => {
+    return row.findIndex((element, index, array) => {
+        if (index < 2) return false;
+        const lastDirection = calcDirection(array[index-1], element);
+        const penultDirection = calcDirection(array[index-2], array[index-1]);
+        return lastDirection != penultDirection;
+    });
+}
+
+const isReportSafe = (row: number[]): boolean => {
+    return (findFirstBadDistance(row) == -1) && (findFirstDirectionChange(row) == -1)
+}
+
+const checkReportWithOneFix = (row: number[]): boolean => {
+    const firstBD = findFirstBadDistance(row);
+    const firstDC = findFirstDirectionChange(row);
+
+    if((firstBD == -1) && (firstDC == -1)) {
+        return true; // "Safe without removing any level"
+    }
+
+    // lowest one which is not -1
+    const firstErrorIndex = firstBD !== -1 && (firstDC === -1 || firstBD < firstDC) ? firstBD : firstDC;
+
+    // generate two different reports (each of them has removed one of the two adjacent levels)
+    const errorFixAttempt1 = [...row.slice(0, firstErrorIndex), ...row.slice(firstErrorIndex + 1)];
+    const errorFixAttempt2 = [...row.slice(0, firstErrorIndex - 1), ...row.slice(firstErrorIndex)];
+    // if the found error is direction change, also add third report (removed penultimate level) 
+    const errorFixAttempt3Conditional = firstDC == -1 ? false : isReportSafe([...row.slice(0, firstErrorIndex - 2), ...row.slice(firstErrorIndex-1)]);
+
+    // if true: "Safe by removing some level"
+    // if false: "Unsafe regardless of which level is removed"
+    return isReportSafe(errorFixAttempt1) || isReportSafe(errorFixAttempt2) || errorFixAttempt3Conditional;
+}
+
+const findSafeReports = (rows: number[][]): number => {
     const mapped = rows.map((report) => {
-        return reportIsSafe(report)
+        return checkReportWithOneFix(report)
     })
     return mapped.reduce((safeReports, item) => {
         return safeReports + (!!item ? 1 : 0);
@@ -53,7 +89,7 @@ const reduceReports = (rows: number[][]): number => {
 export const part2 = (data: string): Effect.Effect<unknown, never, never> => {
     return pipe(
         parse(data),
-        reduceReports,
+        findSafeReports,
         Effect.succeed,
     );
 }
