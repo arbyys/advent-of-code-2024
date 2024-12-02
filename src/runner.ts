@@ -1,6 +1,10 @@
 import { Effect, pipe } from "effect";
 import * as path from "path";
 import * as fs from "fs/promises";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const zeroPad = (num: any, places: number) => String(num).padStart(places, '0');
 
