@@ -1,14 +1,14 @@
 # Advent of Code 2024
+- 
 
-## Running the code
+## Running code of some day:
 - `npm install`
-- `npx tsx`
 ```sh
-tsx ./src/runner.ts <dayNumber> <"part1" or "part2"> <boolean useSampleData>
+npm run day <dayNumber> <"part1" or "part2"> <boolean useSampleData>
 
 # run day 1 part2
-tsx ./src/runner.ts 1 part2
+npm run day 1 part2
 
 # run day 2 part1 with sample data
-tsx ./src/runner.ts 2 part1 true
+npm run day 2 part1 true
 ```
