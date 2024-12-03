@@ -11,6 +11,8 @@ const parse = (data: string) => {
     return "";
 }
 
+//const getNextMulRange = ()
+
 const multiplyAndReduce = (matchedRegex: RegExpExecArray[]): number => {
    return matchedRegex.reduce((result, current) => {
         const decode = Schema.decodeUnknownEither(Schema.NumberFromString);
@@ -25,8 +27,7 @@ const multiplyAndReduce = (matchedRegex: RegExpExecArray[]): number => {
 
 const applyRegex = (data: string): RegExpExecArray[] => {
     const regexp = /mul\(([0-9]{1,3}),([0-9]{1,3})\)/g;
-    const array = [...data.matchAll(regexp)];
-    return array;
+    return [...data.matchAll(regexp)];
 }
 
 export const part1 = (data: string): Effect.Effect<unknown, never, never> => {
