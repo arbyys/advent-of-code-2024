@@ -67,7 +67,7 @@ const runWithDoDont = (data: string): number => {
     return multiplyAndReduce(extractMuls(resultInstructions));
 }
 
-export const part2 = (data: string): Effect.Effect<unknown, never, never> => {
+export const part2 = (data: string): Effect.Effect<number, never, never> => {
     return pipe(
         parse(data),
         runWithDoDont,

@@ -4,24 +4,22 @@ const parse = (data: string) => {
     const lines = data.trim().split("\n").join("");
     const decode = Schema.decodeUnknownEither(Schema.String);
     const result = decode(lines);
-    if(Either.isRight(result)) {
+    if (Either.isRight(result)) {
         return result.right;
     } else
         Effect.fail("Syncing failed");
     return "";
 }
 
-//const getNextMulRange = ()
-
 const multiplyAndReduce = (matchedRegex: RegExpExecArray[]): number => {
-   return matchedRegex.reduce((result, current) => {
+    return matchedRegex.reduce((result, current) => {
         const decode = Schema.decodeUnknownEither(Schema.NumberFromString);
         const num1 = decode(current[1]);
         const num2 = decode(current[2]);
-        if(Either.isRight(num1) && Either.isRight(num2)) {
+        if (Either.isRight(num1) && Either.isRight(num2)) {
             return result + num1.right * num2.right;
-        } else
-            return 0;
+        }
+        return 0;
     }, 0);
 }
 
@@ -30,7 +28,7 @@ const applyRegex = (data: string): RegExpExecArray[] => {
     return [...data.matchAll(regexp)];
 }
 
-export const part1 = (data: string): Effect.Effect<unknown, never, never> => {
+export const part1 = (data: string): Effect.Effect<number, never, never> => {
     return pipe(
         parse(data),
         applyRegex,

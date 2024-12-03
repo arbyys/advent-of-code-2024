@@ -50,7 +50,7 @@ const reduceReports = (rows: number[][]): number => {
     }, 0);
 }
 
-export const part1 = (data: string): Effect.Effect<unknown, never, never> => {
+export const part1 = (data: string): Effect.Effect<number, never, never> => {
     return pipe(
         parse(data),
         reduceReports,

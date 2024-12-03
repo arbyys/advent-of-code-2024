@@ -7,7 +7,9 @@ import { Effect, pipe, Either, Schema } from "effect";
 // attempt to fix it and try again. Another occurence of bad level
 // is unfixable.
 
-// "Attempt to fix it" = Remove level that caused the error or the previous one (or penultimate one in case of Direction Change Error)
+// For each bad level it: removes level that caused the error and also the previous one (in case of Direction Change also the penultimate one) and attempts again with each newly created – possible fixed – report.
+// O(n)
+
 const LineSchema = Schema.Array(Schema.NumberFromString);
 
 const parse = (data: string) => {
@@ -86,7 +88,7 @@ const findSafeReports = (rows: number[][]): number => {
     }, 0);
 }
 
-export const part2 = (data: string): Effect.Effect<unknown, never, never> => {
+export const part2 = (data: string): Effect.Effect<number, never, never> => {
     return pipe(
         parse(data),
         findSafeReports,
