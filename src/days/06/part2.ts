@@ -13,7 +13,7 @@ interface DataPacked {
     rows: string[][]
 }
 
-type MoveAtCoordsTimestamp = {coords: Coords, direction: Direction};
+type MoveAtCoordsTimestamp = { coords: Coords, charLook: string };
 
 const directions: DirectionRecord = {
     "up": [-1, 0],
@@ -47,6 +47,22 @@ const parse = (data: string): DataPacked => {
 
     return { rows, startingCoords };
 }
+
+const markXDirectNeighbors = (grid: string[][]): string[][] =>
+    grid.map((row, r) =>
+        row.map((cell, c) =>
+            cell === "." && [[-1, 0], [1, 0], [0, -1], [0, 1]].some(([dr, dc]) =>
+                grid[r + dr]?.[c + dc] === "X"
+            )
+                ? "X"
+                : cell
+        )
+    );
+
+const addObstacle = (grid: string[][], row: number, col: number): string[][] => 
+    grid.map((currentRow, index_r) =>
+        currentRow.map((cell, index_c) => ((index_r == row && index_c == col) ? "#" : cell))
+    );
 
 const getDirectionByAngle = (char: string): Direction => {
     switch (char) {
@@ -97,13 +113,19 @@ const stepOrTurn = (grid: string[][], visitedMask: string[][], doneMoves: MoveAt
     const currentChar = grid[position.row][position.col];
     const moveVector = getDirectionByAngle(currentChar);
 
-    // if tries to step outside of grid - end of simulation
+    // if tries to step outside of grid - return end of simulation
     if (!isInsideGrid(grid, { row: position.row + moveVector[0], col: position.col + moveVector[1] })) {
         return { grid, visitedMask, doneMoves, movedNotTurned: false, endOfSimulation: true, hasBeenCycled: false };
     }
 
-    // if tures to step in front of seen obstacle - cycled
-    if (false) {
+    // if tries to step in front of seen obstacle - return cycled
+    if (doneMoves.some(move => {
+        return (
+            (move.coords.row == position.row + moveVector[0] && move.coords.col == position.col + moveVector[1])
+            &&
+            (move.charLook == currentChar)
+        )
+    })) {
         return { grid, visitedMask, doneMoves, movedNotTurned: false, endOfSimulation: false, hasBeenCycled: true };
     }
 
@@ -130,7 +152,7 @@ const printGrid = (grid: string[][]): string => {
 }
 
 
-const simulate = (data: DataPacked): string[][] => {
+const simulate = (data: DataPacked): string[][] | string => {
     let currentCoords: Coords = data.startingCoords;
 
     let visitedMask = data.rows.map(row => [...row]);
@@ -144,6 +166,8 @@ const simulate = (data: DataPacked): string[][] => {
 
     while (true) {
         const moveVector = getDirectionByAngle(grid[currentCoords.row][currentCoords.col]);
+        const savedCoords = {...currentCoords};
+        const characterLook = grid[currentCoords.row][currentCoords.col];
 
         ({ grid, visitedMask, doneMoves, movedNotTurned, endOfSimulation, hasBeenCycled } = stepOrTurn(grid, visitedMask, doneMoves, currentCoords));
 
@@ -152,6 +176,11 @@ const simulate = (data: DataPacked): string[][] => {
                 row: currentCoords.row + moveVector[0],
                 col: currentCoords.col + moveVector[1],
             };
+        } else {
+            doneMoves.push({
+                coords: savedCoords,
+                charLook: characterLook
+            })
         }
 
         if (endOfSimulation || hasBeenCycled) {
@@ -159,22 +188,56 @@ const simulate = (data: DataPacked): string[][] => {
         }
     }
 
-    console.log(printGrid(visitedMask));
-
-    return visitedMask;
+    if (endOfSimulation) {
+        return visitedMask;
+    }
+    if (hasBeenCycled) {
+        return "cycled";
+    }
+    return "";
 }
 
-const calculateVisited = (dataVisited: string[][]): number => {
-    return dataVisited.reduce((count, row) => {
-        return count + row.reduce((rowCount, cell) => rowCount + (cell === "X" ? 1 : 0), 0);
-    }, 0);
+const ifPossibleObstaclesCycled = (data: DataPacked): number[] => {
+    const mask = simulate(data);
+
+    if (typeof mask === "string") {
+        return [0];
+    }
+
+    const possibleObstaclePositions = markXDirectNeighbors(mask).flatMap((row, r) =>
+        row.map((cell, c) => (cell === "X" ? { row: r, col: c } : null))
+            .filter(pos => pos !== null) as Coords[]
+    );
+
+    const base_template = data.rows.map(row => [...row]);;
+
+    const limit = possibleObstaclePositions.length;
+    let curr = 0
+    const mappedResults = possibleObstaclePositions.map((currentPosition) => {
+        const editedBase = addObstacle(base_template, currentPosition.row, currentPosition.col);
+        
+        const res = simulate({
+            startingCoords: data.startingCoords,
+            rows: editedBase
+        });
+
+        console.log(curr, "/", limit, "returning", res == "cycled" ? 1 : 0);
+        curr += 1;
+        return res == "cycled" ? 1 : 0;
+    });
+
+    return mappedResults;
+}
+
+const reduceValues = (mappedResults: number[]): number => {
+    return mappedResults.reduce((count, item) => count + item , 0)
 }
 
 export const part2 = (data: string): Effect.Effect<number, never, never> => {
     return pipe(
         parse(data),
-        simulate,
-        calculateVisited,
+        ifPossibleObstaclesCycled,
+        reduceValues,
         Effect.succeed,
     );
 }
