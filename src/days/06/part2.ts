@@ -13,6 +13,8 @@ interface DataPacked {
     rows: string[][]
 }
 
+type MoveAtCoordsTimestamp = {coords: Coords, direction: Direction};
+
 const directions: DirectionRecord = {
     "up": [-1, 0],
     "right": [0, 1],
@@ -84,20 +86,25 @@ const isInsideGrid = (grid: string[][], coords: Coords): boolean => {
     );
 }
 
-const stepOrTurn = (grid: string[][], visitedMask: string[][], position: Coords): {
+const stepOrTurn = (grid: string[][], visitedMask: string[][], doneMoves: MoveAtCoordsTimestamp[], position: Coords): {
     grid: string[][],
     visitedMask: string[][],
+    doneMoves: MoveAtCoordsTimestamp[],
     movedNotTurned: boolean,
-    endOfSimulation: boolean
+    endOfSimulation: boolean,
+    hasBeenCycled: boolean,
 } => {
     const currentChar = grid[position.row][position.col];
-    //console.log(">>>>>>>>>GIGA", currentChar, position);
     const moveVector = getDirectionByAngle(currentChar);
 
-    // tries to step outside of grid - end of simulation
+    // if tries to step outside of grid - end of simulation
     if (!isInsideGrid(grid, { row: position.row + moveVector[0], col: position.col + moveVector[1] })) {
-        //grid[position.row][position.col] = ".";
-        return { grid: grid, visitedMask: visitedMask, movedNotTurned: false, endOfSimulation: true };
+        return { grid, visitedMask, doneMoves, movedNotTurned: false, endOfSimulation: true, hasBeenCycled: false };
+    }
+
+    // if tures to step in front of seen obstacle - cycled
+    if (false) {
+        return { grid, visitedMask, doneMoves, movedNotTurned: false, endOfSimulation: false, hasBeenCycled: true };
     }
 
     // moving now
@@ -107,75 +114,52 @@ const stepOrTurn = (grid: string[][], visitedMask: string[][], position: Coords)
     if (stepForward == "#") {
         grid[position.row][position.col] = moveAngle(currentChar);
 
-        //console.log("gaGPONG", stepForward);
-        //console.log(printGrid(grid));
-        /*console.log("========================");
-        console.log("Turn");
-        console.log("========================");*/
-        return { grid: grid, visitedMask: visitedMask, movedNotTurned: false, endOfSimulation: false };
+        return { grid, visitedMask, doneMoves, movedNotTurned: false, endOfSimulation: false, hasBeenCycled: false };
     }
     // air in in front, step forward
     else {
         grid[position.row][position.col] = ".";
         grid[position.row + moveVector[0]][position.col + moveVector[1]] = currentChar;
-        //console.log(">", moveVector, "<");
         visitedMask[position.row + moveVector[0]][position.col + moveVector[1]] = "X";
-        /*
-        console.log("========================");
-        console.log("Stepping", moveVector);
-        console.log(printGrid(grid));
-        console.log("________________________");
-        console.log(printGrid(visitedMask));
-        console.log("========================");*/
 
-        return { grid: grid, visitedMask: visitedMask, movedNotTurned: true, endOfSimulation: false };
+        return { grid, visitedMask, doneMoves, movedNotTurned: true, endOfSimulation: false, hasBeenCycled: false };
     }
 }
-
 const printGrid = (grid: string[][]): string => {
-    return grid.map(row => row.join(" ")).join("\n");
+    return grid.map(row => row.join("")).join("\n");
 }
 
-const simulate = (data: DataPacked): string[][] => {
 
+const simulate = (data: DataPacked): string[][] => {
     let currentCoords: Coords = data.startingCoords;
 
     let visitedMask = data.rows.map(row => [...row]);
     let grid = data.rows.map(row => [...row]);
+    let doneMoves: MoveAtCoordsTimestamp[] = [];
     let movedNotTurned = true;
+    let hasBeenCycled = false;
     let endOfSimulation = false;
+
+    visitedMask[currentCoords.row][currentCoords.col] = "X";
 
     while (true) {
         const moveVector = getDirectionByAngle(grid[currentCoords.row][currentCoords.col]);
 
-        ({ grid, visitedMask, movedNotTurned, endOfSimulation } = stepOrTurn(grid, visitedMask, currentCoords));
-
-        console.log("called step:", movedNotTurned, endOfSimulation);
-
-        //console.log("=======================================");
-        //console.log("=======================================");
+        ({ grid, visitedMask, doneMoves, movedNotTurned, endOfSimulation, hasBeenCycled } = stepOrTurn(grid, visitedMask, doneMoves, currentCoords));
 
         if (movedNotTurned) {
-            //console.log("befcal", currentCoords);
-            //console.log("moving", "\n", printGrid(grid));
-            //console.log("=======================================");
-
             currentCoords = {
                 row: currentCoords.row + moveVector[0],
                 col: currentCoords.col + moveVector[1],
             };
-            //console.log(currentCoords);
         }
 
-        if (endOfSimulation) {
-            //console.log(printGrid(visitedMask));
-            //console.log("=======================================");
-            //console.log("!!!!!!! > end of sim");
+        if (endOfSimulation || hasBeenCycled) {
             break;
         }
-
-        //await new Promise(f => setTimeout(f, 150));
     }
+
+    console.log(printGrid(visitedMask));
 
     return visitedMask;
 }

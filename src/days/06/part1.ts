@@ -95,7 +95,7 @@ const stepOrTurn = (grid: string[][], visitedMask: string[][], position: Coords)
 
     // if tries to step outside of grid - end of simulation
     if (!isInsideGrid(grid, { row: position.row + moveVector[0], col: position.col + moveVector[1] })) {
-        return { grid: grid, visitedMask: visitedMask, movedNotTurned: false, endOfSimulation: true };
+        return { grid, visitedMask, movedNotTurned: false, endOfSimulation: true };
     }
 
     // moving now
@@ -105,7 +105,7 @@ const stepOrTurn = (grid: string[][], visitedMask: string[][], position: Coords)
     if (stepForward == "#") {
         grid[position.row][position.col] = moveAngle(currentChar);
 
-        return { grid: grid, visitedMask: visitedMask, movedNotTurned: false, endOfSimulation: false };
+        return { grid, visitedMask, movedNotTurned: false, endOfSimulation: false };
     }
     // air in in front, step forward
     else {
@@ -113,7 +113,7 @@ const stepOrTurn = (grid: string[][], visitedMask: string[][], position: Coords)
         grid[position.row + moveVector[0]][position.col + moveVector[1]] = currentChar;
         visitedMask[position.row + moveVector[0]][position.col + moveVector[1]] = "X";
 
-        return { grid: grid, visitedMask: visitedMask, movedNotTurned: true, endOfSimulation: false };
+        return { grid, visitedMask, movedNotTurned: true, endOfSimulation: false };
     }
 }
 
