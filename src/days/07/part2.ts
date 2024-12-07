@@ -1,243 +1,104 @@
 import { Effect, pipe, Schema, Either } from "effect";
 
-const LineSchema = Schema.Array(Schema.String);
+const NumberSchema = Schema.NumberFromString;
+const StringSchema = Schema.String;
 
-type Coords = { row: number, col: number };
+type Operator = "+" | "*" | "||";
 
-type Direction = number[];
-
-type DirectionRecord = Record<string, Direction>;
-
-interface DataPacked {
-    startingCoords: Coords,
-    rows: string[][]
-}
-
-type MoveAtCoordsTimestamp = { coords: Coords, charLook: string };
-
-const directions: DirectionRecord = {
-    "up": [-1, 0],
-    "right": [0, 1],
-    "down": [1, 0],
-    "left": [0, -1],
-};
-
-const parse = (data: string): DataPacked => {
+const parse = (data: string): number[][] => {
     const lines = data.trim().split("\n");
 
-    const rows: string[][] = [];
-    const startingCoords = { row: -1, col: -1 };
+    let rows: number[][] = [];
 
-    lines.map((line, index) => {
-        const parts = line.trim().split("");
-        const decode = Schema.decodeUnknownEither(LineSchema);
+    lines.map((line) => {
+        const parts = line.trim().split(": ");
+        const decodeNumber = Schema.decodeUnknownEither(NumberSchema);
+        const decodeString = Schema.decodeUnknownEither(StringSchema);
 
-        const result = decode(parts);
-        if (Either.isRight(result)) {
-            const search = result.right.indexOf("^");
-            if (search >= 0) {
-                startingCoords.row = index;
-                startingCoords.col = search;
-            }
+        const resultKey = decodeNumber(parts[0]);
+        const resultIndexString = decodeString(parts[1]);
+        if (Either.isRight(resultKey) && Either.isRight(resultIndexString)) {
+            const array = resultIndexString.right.split(" ");
 
-            rows.push([...result.right]);
+            const resultIndex = array
+                .map((i) => decodeNumber(i))
+                .filter(Either.isRight)
+                .map((e) => e.right);
+
+            rows.push([resultKey.right, ...resultIndex]);
         } else
             Effect.fail("Syncing failed");
     });
 
-    return { rows, startingCoords };
+    return rows;
 }
 
-const markXDirectNeighbors = (grid: string[][]): string[][] =>
-    grid.map((row, r) =>
-        row.map((cell, c) =>
-            cell === "." && [[-1, 0], [1, 0], [0, -1], [0, 1]].some(([dr, dc]) =>
-                grid[r + dr]?.[c + dc] === "X"
-            )
-                ? "X"
-                : cell
-        )
-    );
-
-const addObstacle = (grid: string[][], row: number, col: number): string[][] => 
-    grid.map((currentRow, index_r) =>
-        currentRow.map((cell, index_c) => ((index_r == row && index_c == col) ? "#" : cell))
-    );
-
-const getDirectionByAngle = (char: string): Direction => {
-    switch (char) {
-        case "^":
-            return directions["up"];
-        case ">":
-            return directions["right"];
-        case "v":
-            return directions["down"];
-        case "<":
-            return directions["left"];
-        default:
-            return [-1, -1];
-    }
-}
-
-const moveAngle = (char: string): string => {
-    switch (char) {
-        case "^":
-            return ">";
-        case ">":
-            return "v";
-        case "v":
-            return "<";
-        case "<":
-            return "^";
-        default:
-            return "";
-    }
-}
-
-const isInsideGrid = (grid: string[][], coords: Coords): boolean => {
-    return (
-        (coords.row >= 0 && coords.row < grid.length)
-        &&
-        (coords.col >= 0 && coords.col < grid[coords.row].length)
-    );
-}
-
-const stepOrTurn = (grid: string[][], visitedMask: string[][], doneMoves: MoveAtCoordsTimestamp[], position: Coords): {
-    grid: string[][],
-    visitedMask: string[][],
-    doneMoves: MoveAtCoordsTimestamp[],
-    movedNotTurned: boolean,
-    endOfSimulation: boolean,
-    hasBeenCycled: boolean,
-} => {
-    const currentChar = grid[position.row][position.col];
-    const moveVector = getDirectionByAngle(currentChar);
-
-    // if tries to step outside of grid - return end of simulation
-    if (!isInsideGrid(grid, { row: position.row + moveVector[0], col: position.col + moveVector[1] })) {
-        return { grid, visitedMask, doneMoves, movedNotTurned: false, endOfSimulation: true, hasBeenCycled: false };
-    }
-
-    // if tries to step in front of seen obstacle - return cycled
-    if (doneMoves.some(move => {
-        return (
-            (move.coords.row == position.row + moveVector[0] && move.coords.col == position.col + moveVector[1])
-            &&
-            (move.charLook == currentChar)
-        )
-    })) {
-        return { grid, visitedMask, doneMoves, movedNotTurned: false, endOfSimulation: false, hasBeenCycled: true };
-    }
-
-    // moving now
-    const stepForward = grid[position.row + moveVector[0]][position.col + moveVector[1]];
-
-    // can't step forward
-    if (stepForward == "#") {
-        grid[position.row][position.col] = moveAngle(currentChar);
-
-        return { grid, visitedMask, doneMoves, movedNotTurned: false, endOfSimulation: false, hasBeenCycled: false };
-    }
-    // air in in front, step forward
-    else {
-        grid[position.row][position.col] = ".";
-        grid[position.row + moveVector[0]][position.col + moveVector[1]] = currentChar;
-        visitedMask[position.row + moveVector[0]][position.col + moveVector[1]] = "X";
-
-        return { grid, visitedMask, doneMoves, movedNotTurned: true, endOfSimulation: false, hasBeenCycled: false };
-    }
-}
-const printGrid = (grid: string[][]): string => {
-    return grid.map(row => row.join("")).join("\n");
-}
-
-
-const simulate = (data: DataPacked): string[][] | string => {
-    let currentCoords: Coords = data.startingCoords;
-
-    let visitedMask = data.rows.map(row => [...row]);
-    let grid = data.rows.map(row => [...row]);
-    let doneMoves: MoveAtCoordsTimestamp[] = [];
-    let movedNotTurned = true;
-    let hasBeenCycled = false;
-    let endOfSimulation = false;
-
-    visitedMask[currentCoords.row][currentCoords.col] = "X";
-
-    while (true) {
-        const moveVector = getDirectionByAngle(grid[currentCoords.row][currentCoords.col]);
-        const savedCoords = {...currentCoords};
-        const characterLook = grid[currentCoords.row][currentCoords.col];
-
-        ({ grid, visitedMask, doneMoves, movedNotTurned, endOfSimulation, hasBeenCycled } = stepOrTurn(grid, visitedMask, doneMoves, currentCoords));
-
-        if (movedNotTurned) {
-            currentCoords = {
-                row: currentCoords.row + moveVector[0],
-                col: currentCoords.col + moveVector[1],
-            };
-        } else {
-            doneMoves.push({
-                coords: savedCoords,
-                charLook: characterLook
-            })
-        }
-
-        if (endOfSimulation || hasBeenCycled) {
-            break;
-        }
-    }
-
-    if (endOfSimulation) {
-        return visitedMask;
-    }
-    if (hasBeenCycled) {
-        return "cycled";
-    }
-    return "";
-}
-
-const ifPossibleObstaclesCycled = (data: DataPacked): number[] => {
-    const mask = simulate(data);
-
-    if (typeof mask === "string") {
-        return [0];
-    }
-
-    const possibleObstaclePositions = markXDirectNeighbors(mask).flatMap((row, r) =>
-        row.map((cell, c) => (cell === "X" ? { row: r, col: c } : null))
-            .filter(pos => pos !== null) as Coords[]
-    );
-
-    const base_template = data.rows.map(row => [...row]);;
-
-    const limit = possibleObstaclePositions.length;
-    let curr = 0
-    const mappedResults = possibleObstaclePositions.map((currentPosition) => {
-        const editedBase = addObstacle(base_template, currentPosition.row, currentPosition.col);
+const solveArrayEquation = (equation: Array<number | Operator>, mustBeEqualTo: number): boolean => {
+    let latest = BigInt(0);
+    equation.every((num2, idx, arr) => {
+        const lastElement = arr[idx-1];
         
-        const res = simulate({
-            startingCoords: data.startingCoords,
-            rows: editedBase
-        });
+        // break early if already exceeded target value
+        if (latest > mustBeEqualTo) return false;
 
-        console.log(curr, "/", limit, "returning", res == "cycled" ? 1 : 0);
-        curr += 1;
-        return res == "cycled" ? 1 : 0;
+        // continue on first element or odd elements (it's the inserted operators)
+        if (lastElement === undefined || idx % 2 == 1 ) return true;
+
+        const operator = lastElement as Operator;
+        const num1 = arr[idx-2] as number;
+            
+        if (typeof num2 === "number") {
+            const result = (operator == "+") ? (num1 + num2) : ((operator == "*") ? (num1 * num2) : Number(`${num1}${num2}`));
+            latest = BigInt(result);
+            arr[idx] = result;
+        }
+        return true;
     });
 
-    return mappedResults;
+    return latest == BigInt(mustBeEqualTo);
 }
 
-const reduceValues = (mappedResults: number[]): number => {
-    return mappedResults.reduce((count, item) => count + item , 0)
+const checkAllPermutations = (arr: number[], leftSide: number): boolean => {
+    const n = arr.length - 1;
+    const permutations = 3 ** n;
+
+    for (let i = 0; i < permutations; i++) {
+        const expression: (number | Operator)[] = [];
+        let temp = i;
+
+        arr.forEach((num, idx) => {
+            expression.push(num);
+            if (idx < n) {
+                const operatorIndex = temp % 3;
+                temp = Math.floor(temp / 3);
+                expression.push(operatorIndex === 0 ? "+" : operatorIndex === 1 ? "*" : "||");
+            }
+        });
+        if (solveArrayEquation(expression, leftSide)) {
+            return true;
+        };
+    }
+    return false;
+};
+
+const process = (rows: number[][]): number => {
+    const max = rows.length;
+
+    return rows.map((item, idx) => {
+        console.log(">", idx, "/", max-1);
+        const numberKey = item[0];
+        const value = item.slice(1);
+        const result = checkAllPermutations(value, numberKey);
+
+        if(result) return numberKey;
+        return 0;
+    }).reduce((item, total) => (total + item), 0);
 }
 
 export const part2 = (data: string): Effect.Effect<number, never, never> => {
     return pipe(
         parse(data),
-        ifPossibleObstaclesCycled,
-        reduceValues,
+        process,
         Effect.succeed,
     );
 }
