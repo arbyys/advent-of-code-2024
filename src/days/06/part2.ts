@@ -147,10 +147,10 @@ const stepOrTurn = (grid: string[][], visitedMask: string[][], doneMoves: MoveAt
         return { grid, visitedMask, doneMoves, movedNotTurned: true, endOfSimulation: false, hasBeenCycled: false };
     }
 }
+
 const printGrid = (grid: string[][]): string => {
     return grid.map(row => row.join("")).join("\n");
 }
-
 
 const simulate = (data: DataPacked): string[][] | string => {
     let currentCoords: Coords = data.startingCoords;
