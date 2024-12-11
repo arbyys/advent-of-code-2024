@@ -50,10 +50,6 @@ class DiskMap extends Array<number | null> {
     }
 }
 
-const printData = (data: (number | null)[]): void => {
-    console.log('\n' + data.map(item => item === null ? "." : item ).join(""));
-}
-
 const constructDiskMapArray = (dataRaw: number[]): (number | null)[] => {
     let currentId = 0;
     const result: (number | null)[] = [];
@@ -66,7 +62,6 @@ const constructDiskMapArray = (dataRaw: number[]): (number | null)[] => {
         }
     });
 
-    //console.log("r:", result);
     return result;
 }
 
@@ -86,15 +81,12 @@ const process = (data: number[]): number[] => {
     let iterNum = 0;
 
     while(true) {
-        //console.log("Current iter:", iterNum, diskMap.getItems());
         const id = diskMap.popLastId();
         if (!id) break;
         if (!!id && !diskMap.hasSomeEmpty()) { diskMap.push(id); break; }
         diskMap.fillFirstEmpty(id);
         iterNum += 1;
     }
-
-    console.log("END", diskMap.getItems())
 
     return diskMap.getItems() as number[];
 }

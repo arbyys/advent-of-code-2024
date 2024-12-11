@@ -76,10 +76,6 @@ class DiskMap extends Array<number | null> {
     }
 }
 
-const printData = (data: (number | null)[]): void => {
-    console.log(data.map(item => item === null ? "." : item).join(""));
-}
-
 const constructDiskMapArray = (dataRaw: number[]): DataPacked => {
     let currentId = 0;
     const result: (number | null)[] = [];
