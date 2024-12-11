@@ -28,22 +28,55 @@ const parse = (data: string) => {
 // for each two points `p1`, `p2` with the same frequency:
 //   construct a line between them
 //   calculate distance between `p1` and `p2`
-//   find the other two points on the line which match this distance to `p1` / `p2`
-//   -> those two points are the candidates for antinode positions
+//   find all points on the line with where the step equals to distance
+//   -> those points are the candidates for antinode positions
 //   (every possible antinode position can also be outside the grid, careful)
 
-const findAntinodeCandidate = (pt1: Coords, pt2: Coords): [Coords, Coords] => {
+const findAntinodeCandidates = (grid: string[][], pt1: Coords, pt2: Coords): Coords[] => {
     const [x1, y1] = pt1;
     const [x2, y2] = pt2;
 
-    const distance = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+    const distance = Math.round(Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2));
 
-    const candidate1X = Math.round(x2 + ((x2 - x1) / distance) * distance);
-    const candidate1Y = Math.round(y2 + ((y2 - y1) / distance) * distance);
-    const candidate2X = Math.round(x1 + ((x1 - x2) / distance) * distance);
-    const candidate2Y = Math.round(y1 + ((y1 - y2) / distance) * distance);
+    let result: Coords[] = [];
 
-    return [[candidate1X, candidate1Y], [candidate2X, candidate2Y]];
+    // 1) start on point2, traverse in point1 direction
+    let lastCoord = [x2, y2];
+    let currentCoord: Coords = [
+        Math.round(x2 + ((x2 - x1) / distance) * distance),
+        Math.round(y2 + ((y2 - y1) / distance) * distance)
+    ];
+
+    while(isInsideGrid(grid, currentCoord)) {
+        result.push(currentCoord);
+        
+        const temp = [...currentCoord];
+        currentCoord = [
+            Math.round(currentCoord[0] + ((currentCoord[0] - lastCoord[0]) / distance) * distance),
+            Math.round(currentCoord[1] + ((currentCoord[1] - lastCoord[1]) / distance) * distance)
+        ]
+        lastCoord = [...temp];
+    }
+
+    // 2) start on point1, traverse in point2 direction
+    lastCoord = [x1, y1];
+    currentCoord = [
+        Math.round(x1 + ((x1 - x2) / distance) * distance),
+        Math.round(y1 + ((y1 - y2) / distance) * distance)
+    ];
+
+    while(isInsideGrid(grid, currentCoord)) {
+        result.push(currentCoord);
+
+        const temp = [...currentCoord];
+        currentCoord = [
+            Math.round(currentCoord[0] + ((currentCoord[0] - lastCoord[0]) / distance) * distance),
+            Math.round(currentCoord[1] + ((currentCoord[1] - lastCoord[1]) / distance) * distance)
+        ]
+        lastCoord = [...temp];
+    }
+
+    return result;
 }
 
 const getAntennaPositions = (grid: string[][]): Record<string, Coords[]> => {
@@ -66,16 +99,9 @@ const isInsideGrid = (grid: string[][], coords: Coords): boolean => {
     );
 }
 
-const printGrid = (grid: string[][]): string => {
-    return grid.map(row => row.join("")).join("\n");
-}
-
 const countAntinodes = (rows: string[][]): number => {
     const antennaCoords = getAntennaPositions(rows);
     const antennas = Object.keys(antennaCoords);
-
-    //console.log(antennaCoords);
-    //console.log(antennas);
 
     const antinodesMask = Array(rows.length).fill(null).map(()=>Array(rows[0].length).fill('.'))
 
@@ -84,21 +110,17 @@ const countAntinodes = (rows: string[][]): number => {
 
         for (let i = 0; i < coords.length; i++) {
             for (let j = i + 1; j < coords.length; j++) {
-                const candidates = findAntinodeCandidate(coords[i], coords[j]);
+                antinodesMask[coords[i][0]][coords[i][1]] = "#";
+                antinodesMask[coords[j][0]][coords[j][1]] = "#";
 
-                console.log("C:", candidates);
+                const candidates = findAntinodeCandidates(rows, coords[i], coords[j]);
 
-                if(isInsideGrid(antinodesMask, candidates[0])) {
-                    antinodesMask[candidates[0][0]][candidates[0][1]] = "#";
-                }
-                if(isInsideGrid(antinodesMask, candidates[1])) {
-                    antinodesMask[candidates[1][0]][candidates[1][1]] = "#";
-                }
+                candidates.forEach((item) => {
+                    antinodesMask[item[0]][item[1]] = "#";
+                });
             }
         }
     });
-
-    //console.log(printGrid(antinodesMask));
 
     return antinodesMask.flat().reduce((count, item) => count + (item === "#" ? 1 : 0), 0);
 }

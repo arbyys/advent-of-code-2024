@@ -32,7 +32,7 @@ const parse = (data: string) => {
 //   -> those two points are the candidates for antinode positions
 //   (every possible antinode position can also be outside the grid, careful)
 
-const findAntinodeCandidate = (pt1: Coords, pt2: Coords): [Coords, Coords] => {
+const findAntinodeCandidates = (pt1: Coords, pt2: Coords): [Coords, Coords] => {
     const [x1, y1] = pt1;
     const [x2, y2] = pt2;
     const distance = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
@@ -77,7 +77,7 @@ const countAntinodes = (rows: string[][]): number => {
 
         for (let i = 0; i < coords.length; i++) {
             for (let j = i + 1; j < coords.length; j++) {
-                const candidates = findAntinodeCandidate(coords[i], coords[j]);
+                const candidates = findAntinodeCandidates(coords[i], coords[j]);
 
                 if(isInsideGrid(antinodesMask, candidates[0])) {
                     antinodesMask[candidates[0][0]][candidates[0][1]] = "#";
