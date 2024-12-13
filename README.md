@@ -1,5 +1,4 @@
 # Advent of Code 2024
-- 
 
 ## Running code of some day:
 - `npm install`
